@@ -13,6 +13,10 @@ RUN npm ci
 # 构建阶段
 FROM base AS builder
 WORKDIR /app
+
+# 创建必要的目录
+RUN mkdir -p /app/public /app/data
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -36,16 +40,16 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # 创建必要的目录
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+RUN mkdir -p /app/data /app/public /app/.next/static /app/uploads && chown -R nextjs:nodejs /app
 
 # 从builder阶段复制文件
-COPY --from=builder /app/public ./public
+COPY --from=builder /app/public ./public 2>/dev/null || true
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static 2>/dev/null || true
 
 # 复制数据库文件（如果存在）
 COPY --from=builder --chown=nextjs:nodejs /app/legal-library.db* ./data/ 2>/dev/null || true
-COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
+COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib 2>/dev/null || true
 
 # 切换到非root用户
 USER nextjs
